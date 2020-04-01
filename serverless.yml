@@ -56,17 +56,23 @@ package:
     - ./bin/**
 
 functions:
-  hello:
-    handler: bin/hello
+  createMagicUrl:
+    handler: bin/create_magicurl
     events:
       - http:
           path: hello
           method: get
-  world:
-    handler: bin/world
+  getMagicUrl:
+    handler: bin/get_magicurl
     events:
       - http:
           path: world
+          method: get
+  deleteMagicUrl:
+    handler: bin/delete_magicurl
+    events:
+      - http:
+          path: yay
           method: get
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
