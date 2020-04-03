@@ -7,6 +7,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+
+	"github.com/personal_projects/magic-url-serverless/magicurl"
 )
 
 // Response is of type APIGatewayProxyResponse since we're leveraging the
@@ -15,12 +17,35 @@ import (
 // https://serverless.com/framework/docs/providers/aws/events/apigateway/#lambda-proxy-integration
 type Response events.APIGatewayProxyResponse
 
-// Handler is our lambda handler invoked by the `lambda.Start` function call
-func Handler(ctx context.Context) (Response, error) {
-	var buf bytes.Buffer
+// MagicURLRequest contains the original URL
+type MagicURLRequest struct {
+	OriginalURL string `json:"url`
+}
 
+// Validate checks that the MagicURL request URL is a valid URL format
+func (*MagicURLRequest) Validate() error {
+	return nil
+}
+
+// Handler is our lambda handler invoked by the `lambda.Start` function call
+func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
+	var magicURLRequest MagicURLRequest
+	json.Unmarshal([]byte(request.Body), &magicURLRequest)
+	originalURL := magicURLRequest.OriginalURL
+
+	err := magicURLRequest.Validate()
+	if err != nil {
+		return Response{Body: "Error", StatusCode: 400}, err
+	}
+
+	slug, err := magicurl.Create(originalURL)
+	if err != nil {
+		return Response{Body: "Error", StatusCode: 400}, err
+	}
+
+	var buf bytes.Buffer
 	body, err := json.Marshal(map[string]interface{}{
-		"message": "Successfully created a MagicUrl",
+		"slug": slug,
 	})
 	if err != nil {
 		return Response{StatusCode: 404}, err

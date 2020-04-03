@@ -60,8 +60,8 @@ functions:
     handler: bin/create_magicurl
     events:
       - http:
-          path: hello
-          method: get
+          path: magicurl
+          method: post
   getMagicUrl:
     handler: bin/get_magicurl
     events:
@@ -126,3 +126,20 @@ functions:
 #     NewOutput:
 #       Description: "Description for the output"
 #       Value: "Some output value"
+
+
+resources:
+  Resources:
+    magicUrlTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: Slug
+            AttributeType: S
+        KeySchema:
+          - AttributeName: Slug
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: magicUrl
