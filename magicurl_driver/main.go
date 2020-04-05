@@ -8,8 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-
-	"github.com/personal_projects/magic-url-serverless/magicurl"
 )
 
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
@@ -30,13 +28,16 @@ func main() {
 		fmt.Printf("%s table already exists\n", magicURLTable)
 	}
 
+	dynamoDbInitializeSlug()
+	fmt.Println("Successfully initialize slug")
 	// Test create slug
-	slug, err := magicurl.Create("original_url", svc)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/* 	slug, err := magicurl.Create("original_url", svc)
+	   	if err != nil {
+	   		fmt.Println("Creating slug had an error")
+	   		log.Fatal(err)
+	   	}
 
-	fmt.Printf("Result is %v\n", slug)
+	   	fmt.Printf("Result is %v\n", slug) */
 }
 
 func dynamoDbTableExists(tableName string) bool {
@@ -80,4 +81,27 @@ func createDynamoDbTable(tableName string) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+func dynamoDbInitializeSlug() error {
+	input := &dynamodb.PutItemInput{
+		Item: map[string]*dynamodb.AttributeValue{
+			"Slug": {
+				S: aws.String("0"),
+			},
+			"IdBase10": {
+				N: aws.String("0"),
+			},
+		},
+		TableName: aws.String("magicUrl"),
+	}
+
+	_, err := svc.PutItem(input)
+	if err != nil {
+		fmt.Println("Got error calling PutItem:")
+		fmt.Println(err.Error())
+		return err
+	}
+
+	return nil
 }

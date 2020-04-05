@@ -1,6 +1,8 @@
 package magicurl
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
@@ -29,16 +31,21 @@ func Create(originalURL string, client *dynamodb.DynamoDB) (string, error) {
 }
 
 func updateMagicURLId(client *dynamodb.DynamoDB) (int, error) {
-	_, err := client.GetItem(&dynamodb.GetItemInput{
+	res, err := client.GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String("magicUrl"),
 		Key: map[string]*dynamodb.AttributeValue{
 			"Slug": {
-				N: aws.String("0"),
+				S: aws.String("0"),
 			},
 		},
 	})
+
+	//Check if the key is existing
 	if err != nil {
 		return -1, err
+	}
+	if len(res.Item) == 0 {
+		fmt.Println("Item not found")
 	}
 
 	return 0, nil
