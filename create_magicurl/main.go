@@ -7,9 +7,16 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 
 	"github.com/personal_projects/magic-url-serverless/magicurl"
 )
+
+var sess = session.Must(session.NewSessionWithOptions(session.Options{
+	SharedConfigState: session.SharedConfigEnable,
+}))
+var svc = dynamodb.New(sess)
 
 // Response is of type APIGatewayProxyResponse since we're leveraging the
 // AWS Lambda Proxy Request functionality (default behavior)
@@ -19,26 +26,19 @@ type Response events.APIGatewayProxyResponse
 
 // MagicURLRequest contains the original URL
 type MagicURLRequest struct {
-	OriginalURL string `json:"url`
-}
-
-// Validate checks that the MagicURL request URL is a valid URL format
-func (*MagicURLRequest) Validate() error {
-	return nil
+	OriginalURL string `json:"url,omitempty"`
 }
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
 	var magicURLRequest MagicURLRequest
-	json.Unmarshal([]byte(request.Body), &magicURLRequest)
-	originalURL := magicURLRequest.OriginalURL
-
-	err := magicURLRequest.Validate()
+	err := json.Unmarshal([]byte(request.Body), &magicURLRequest)
 	if err != nil {
 		return Response{Body: "Error", StatusCode: 400}, err
 	}
 
-	slug, err := magicurl.Create(originalURL)
+	originalURL := magicURLRequest.OriginalURL
+	slug, err := magicurl.Create(originalURL, svc)
 	if err != nil {
 		return Response{Body: "Error", StatusCode: 400}, err
 	}
