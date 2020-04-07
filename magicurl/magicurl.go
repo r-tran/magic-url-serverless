@@ -1,11 +1,16 @@
 package magicurl
 
 import (
+	b64 "encoding/base64"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
+
+var magicURLTable = "magicUrl"
 
 // Create shortened URL to the database.
 func Create(originalURL string, client *dynamodb.DynamoDB) (string, error) {
@@ -15,19 +20,72 @@ func Create(originalURL string, client *dynamodb.DynamoDB) (string, error) {
 		return "", err
 	}
 
-	//get id from db, atomic increment value in the db
-	//id, err := updateMagicURLId(client)
-	_, err = updateMagicURLId(client)
+	id, err := IncrementBase10Counter(client)
 	if err != nil {
 		return "", err
 	}
 
-	//create slug as base64-encoded id
+	slug, err := CreateMagicURLItem(originalURL, id, client)
+	if err != nil {
+		return "", err
+	}
 
-	//create MagicUrlItem, insert in the db
+	return slug, nil
+}
 
-	//on successful add,  return created slug
-	return "raytran_slug", nil
+//CreateMagicURLItem creates an entry in DynamoDb for the MagicUrl
+func CreateMagicURLItem(originalURL string, id int, client *dynamodb.DynamoDB) (string, error) {
+	base10Id := strconv.Itoa(id)
+
+	//Not getting the expected bounds on slug length. How to figure out the slug encoding here?
+	slug := b64.StdEncoding.EncodeToString([]byte(base10Id))
+
+	/* 	input := &dynamodb.PutItemInput{
+		   		Item: map[string]*dynamodb.AttributeValue{
+		   			"Slug": {
+		   				S: aws.String(slug),
+		   			},
+		   			"OriginalUrl": {
+		   				S: aws.String(originalURL),
+		   			},
+		   		},
+		   		TableName: aws.String(magicURLTable),
+		   	}
+	// Will need to return slug based on the PutItem output
+		   	res, err := client.PutItem(input)
+		   	if err != nil {
+		   		return "", err
+		   	} */
+
+	return slug, nil
+}
+
+//IncrementBase10Counter is used for hashing the URL slug
+func IncrementBase10Counter(client *dynamodb.DynamoDB) (int, error) {
+	updateInput := &dynamodb.UpdateItemInput{
+		TableName: aws.String(magicURLTable),
+		Key: map[string]*dynamodb.AttributeValue{
+			"Slug": {
+				S: aws.String("0"),
+			},
+		},
+		UpdateExpression: aws.String("SET Base10Counter = Base10Counter + :incr"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":incr": {
+				N: aws.String("1"),
+			},
+		},
+		ReturnValues: aws.String("ALL_NEW"),
+	}
+
+	res, err := client.UpdateItem(updateInput)
+	if err != nil {
+		return -1, err
+	}
+
+	var counterValue int
+	dynamodbattribute.Unmarshal(res.Attributes["Base10Counter"], &counterValue)
+	return counterValue, nil
 }
 
 func updateMagicURLId(client *dynamodb.DynamoDB) (int, error) {

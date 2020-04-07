@@ -3,14 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
@@ -20,31 +17,32 @@ var svc = dynamodb.New(sess)
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
 func Handler(ctx context.Context) error {
-	addItem("magicUrl")
+	return dynamoDbInitializeSlug()
 }
 
 func main() {
 	lambda.Start(Handler)
 }
 
-func addItem(tableName string) error {
+func dynamoDbInitializeSlug() error {
 	input := &dynamodb.PutItemInput{
-		Item: map[string]*dynamodbAttributmap[string]*dynamodb.AttributeValue{
-			"Slug"	: {
-				S: aws.String("0")
-			}
-			"Value" : {
-				N: aws.Int64(0)
-			}
+		Item: map[string]*dynamodb.AttributeValue{
+			"Slug": {
+				S: aws.String("0"),
+			},
+			"IdBase10": {
+				N: aws.String("0"),
+			},
 		},
-		TableName: aws.String(tableName),
+		TableName: aws.String("magicUrl"),
 	}
 
-	_, err = svc.PutItem(input)
+	_, err := svc.PutItem(input)
 	if err != nil {
 		fmt.Println("Got error calling PutItem:")
 		fmt.Println(err.Error())
 		return err
 	}
+
 	return nil
 }
