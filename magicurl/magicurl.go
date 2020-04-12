@@ -1,9 +1,7 @@
 package magicurl
 
 import (
-	b64 "encoding/base64"
 	"fmt"
-	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -35,29 +33,26 @@ func Create(originalURL string, client *dynamodb.DynamoDB) (string, error) {
 
 //CreateMagicURLItem creates an entry in DynamoDb for the MagicUrl
 func CreateMagicURLItem(originalURL string, id int, client *dynamodb.DynamoDB) (string, error) {
-	base10Id := strconv.Itoa(id)
-
-	//Not getting the expected bounds on slug length. How to figure out the slug encoding here?
-	slug := b64.StdEncoding.EncodeToString([]byte(base10Id))
-
+	//slug := encodeToBase62(id)
 	/* 	input := &dynamodb.PutItemInput{
-		   		Item: map[string]*dynamodb.AttributeValue{
-		   			"Slug": {
-		   				S: aws.String(slug),
-		   			},
-		   			"OriginalUrl": {
-		   				S: aws.String(originalURL),
-		   			},
-		   		},
-		   		TableName: aws.String(magicURLTable),
-		   	}
+		Item: map[string]*dynamodb.AttributeValue{
+			"Slug": {
+				S: aws.String(slug),
+			},
+			"OriginalUrl": {
+				S: aws.String(originalURL),
+			},
+		},
+		TableName: aws.String(magicURLTable),
+	} */
 	// Will need to return slug based on the PutItem output
-		   	res, err := client.PutItem(input)
-		   	if err != nil {
-		   		return "", err
-		   	} */
+	/* 	res, err := client.PutItem(input)
+	   	if err != nil {
+	   		return "", err
+	   	} */
 
-	return slug, nil
+	//return slug, nil
+	return "", nil
 }
 
 //IncrementBase10Counter is used for hashing the URL slug
