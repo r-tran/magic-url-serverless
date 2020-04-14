@@ -12,32 +12,88 @@ import (
 var magicURLTable = "magicUrl"
 
 // Create shortened URL to the database.
-func Create(originalURL string, client *dynamodb.DynamoDB) (string, error) {
+func Create(originalURL string, client *dynamodb.DynamoDB) (*MagicURL, error) {
 	//TODO: perform input validation the url
 	err := validateURL(originalURL)
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("Invalid URL format: %s", originalURL)
+		return nil, &CreateMagicURLSlugError{message}
 	}
 
-	id, err := IncrementBase10Counter(client)
+	id, err := incrementBase10Counter(client)
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("Could not update base counter for slug")
+		return nil, &CreateMagicURLSlugError{message}
 	}
 
 	idString := strconv.Itoa(id)
-	slug, err := CreateMagicURLItem(originalURL, idString, client)
+	magicURLItem, err := createMagicURLItem(originalURL, idString, client)
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("Failed to create MagicURL item for slug")
+		return nil, &CreateMagicURLSlugError{message}
 	}
 
-	return slug, nil
+	return magicURLItem, nil
 }
 
-//CreateMagicURLItem creates an entry in DynamoDb for the MagicUrl
-func CreateMagicURLItem(originalURL string, id string, client *dynamodb.DynamoDB) (string, error) {
+//Get retrieves the Slug from the database, if not found returns exception
+func Get(urlSlug string, client *dynamodb.DynamoDB) (*MagicURL, error) {
+	result, err := client.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(magicURLTable),
+		Key: map[string]*dynamodb.AttributeValue{
+			"Slug": {
+				S: aws.String(urlSlug),
+			},
+		},
+	})
+	if err != nil {
+		message := fmt.Sprintf("Could not locate MagicURL for slug: %s", urlSlug)
+		return nil, &GetMagicURLSlugError{message}
+	}
+
+	magicURLItem := MagicURL{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, &magicURLItem)
+	if err != nil {
+		message := fmt.Sprintf("Failed to create MagicURL result for slug: %s", urlSlug)
+		return nil, &GetMagicURLSlugError{message}
+	}
+
+	return &magicURLItem, nil
+}
+
+//Delete retrieves the slug stored in the data store and removes it.
+func Delete(urlSlug string, client *dynamodb.DynamoDB) (*MagicURL, error) {
+	input := &dynamodb.DeleteItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"Slug": {
+				S: aws.String(urlSlug),
+			},
+		},
+		ConditionExpression: aws.String("attribute_not_exists(Base10Counter)"),
+		TableName:           aws.String(magicURLTable),
+		ReturnValues:        aws.String("ALL_OLD"),
+	}
+
+	result, err := client.DeleteItem(input)
+	if err != nil {
+		message := fmt.Sprintf("Could not locate MagicURL for slug: %s", urlSlug)
+		return nil, &DeleteMagicURLSlugError{message}
+	}
+
+	magicURLItem := MagicURL{}
+	err = dynamodbattribute.UnmarshalMap(result.Attributes, &magicURLItem)
+	if err != nil {
+		message := fmt.Sprintf("Failed to create MagicURL result for slug: %s", urlSlug)
+		return nil, &DeleteMagicURLSlugError{message}
+	}
+
+	return &magicURLItem, nil
+}
+
+func createMagicURLItem(originalURL string, id string, client *dynamodb.DynamoDB) (*MagicURL, error) {
 	slug, err := EncodeToBase62(id)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	input := &dynamodb.PutItemInput{
@@ -55,19 +111,18 @@ func CreateMagicURLItem(originalURL string, id string, client *dynamodb.DynamoDB
 
 	_, err = client.PutItem(input)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return slug, nil
+	return Get(slug, client)
 }
 
-//IncrementBase10Counter is used for hashing the URL slug
-func IncrementBase10Counter(client *dynamodb.DynamoDB) (int, error) {
+func incrementBase10Counter(client *dynamodb.DynamoDB) (int, error) {
 	updateInput := &dynamodb.UpdateItemInput{
 		TableName: aws.String(magicURLTable),
 		Key: map[string]*dynamodb.AttributeValue{
 			"Slug": {
-				S: aws.String("0"),
+				S: aws.String("A"),
 			},
 		},
 		UpdateExpression: aws.String("SET Base10Counter = Base10Counter + :incr"),

@@ -59,14 +59,34 @@ func main() {
 	// }
 
 	// Test create slug
-	slug, err := magicurl.Create("https://pythonsandpenguins.dev", svc)
+	slug, err := magicurl.Create("https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html", svc)
 	if err != nil {
 		fmt.Println("Creating slug had an error")
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Printf("Got slug: %s\n", slug)
+	fmt.Printf("Created slug: %v\n", slug)
 
+	// //Retrieve slug
+	// //slug := "A"
+	// fmt.Println("Retrieving the slug...")
+	// magicURLItem, err := magicurl.Get(slug, svc)
+	// if err != nil {
+	// 	fmt.Println("GET slug had an error")
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+	// fmt.Printf("Result: %v\n", magicURLItem)
+
+	// //Delete slug
+	// fmt.Println("Deleting the slug...")
+	// result, err := magicurl.Delete(slug, svc)
+	// if err != nil {
+	// 	fmt.Println("Delete slug had an error")
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+	// fmt.Printf("Result: %v\n", result)
 }
 
 //TODO: Extract into provisioning step
@@ -74,7 +94,7 @@ func initializeBase10Counter() error {
 	input := &dynamodb.PutItemInput{
 		Item: map[string]*dynamodb.AttributeValue{
 			"Slug": {
-				S: aws.String("0"),
+				S: aws.String("A"),
 			},
 			"Base10Counter": {
 				N: aws.String("0"),
@@ -96,7 +116,7 @@ func base10CounterInitialized() bool {
 		TableName: aws.String(magicURLTable),
 		Key: map[string]*dynamodb.AttributeValue{
 			"Slug": {
-				S: aws.String("0"),
+				S: aws.String("A"),
 			},
 		},
 	})
