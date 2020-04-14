@@ -2,6 +2,7 @@ package magicurl
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -23,7 +24,8 @@ func Create(originalURL string, client *dynamodb.DynamoDB) (string, error) {
 		return "", err
 	}
 
-	slug, err := CreateMagicURLItem(originalURL, id, client)
+	idString := strconv.Itoa(id)
+	slug, err := CreateMagicURLItem(originalURL, idString, client)
 	if err != nil {
 		return "", err
 	}
@@ -32,9 +34,13 @@ func Create(originalURL string, client *dynamodb.DynamoDB) (string, error) {
 }
 
 //CreateMagicURLItem creates an entry in DynamoDb for the MagicUrl
-func CreateMagicURLItem(originalURL string, id int, client *dynamodb.DynamoDB) (string, error) {
-	//slug := encodeToBase62(id)
-	/* 	input := &dynamodb.PutItemInput{
+func CreateMagicURLItem(originalURL string, id string, client *dynamodb.DynamoDB) (string, error) {
+	slug, err := EncodeToBase62(id)
+	if err != nil {
+		return "", err
+	}
+
+	input := &dynamodb.PutItemInput{
 		Item: map[string]*dynamodb.AttributeValue{
 			"Slug": {
 				S: aws.String(slug),
@@ -43,16 +49,16 @@ func CreateMagicURLItem(originalURL string, id int, client *dynamodb.DynamoDB) (
 				S: aws.String(originalURL),
 			},
 		},
-		TableName: aws.String(magicURLTable),
-	} */
-	// Will need to return slug based on the PutItem output
-	/* 	res, err := client.PutItem(input)
-	   	if err != nil {
-	   		return "", err
-	   	} */
+		TableName:           aws.String(magicURLTable),
+		ConditionExpression: aws.String("attribute_not_exists(Slug)"),
+	}
 
-	//return slug, nil
-	return "", nil
+	_, err = client.PutItem(input)
+	if err != nil {
+		return "", err
+	}
+
+	return slug, nil
 }
 
 //IncrementBase10Counter is used for hashing the URL slug

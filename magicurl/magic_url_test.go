@@ -1,7 +1,7 @@
 package magicurl
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 )
 
@@ -35,12 +35,14 @@ func TestBase62Encoding(t *testing.T) {
 	t.Run("max size uint64", func(t *testing.T) {
 		assertCorrectBase62Encoding(t, "18446744073709551615", "V8qRkBGKRiP")
 	})
-	t.Run("invalid decimal input returns magicUrlBaseConverterError", func(t *testing.T) {
+	t.Run("invalid decimal input returns BaseConverterError", func(t *testing.T) {
+		var expectedError *BaseConverterError
 		if _, err := EncodeToBase62("100+s0000"); err != nil {
-			fmt.Println("TEST CAUGHT ERR")
-			if e, caught := err.(*magicURLBaseConverterError); !caught {
-				t.Errorf("Expected magicUrlBaseConverterError, but got: %s\n", e)
+			if !errors.As(err, &expectedError) {
+				t.Errorf("Expected BaseConverterError\n")
 			}
+		} else {
+			t.Errorf("Expected BaseConverterError\n")
 		}
 	})
 }
@@ -73,5 +75,15 @@ func TestDecodeToBase10(t *testing.T) {
 	})
 	t.Run("encode base62 with max size uint64", func(t *testing.T) {
 		assertCorrectBase10Decoding(t, "V8qRkBGKRiP", "18446744073709551615")
+	})
+	t.Run("invalid decimal input returns BaseConverterError", func(t *testing.T) {
+		var expectedError *BaseConverterError
+		if _, err := DecodeToBase10("04p98xA!OMG"); err != nil {
+			if !errors.As(err, &expectedError) {
+				t.Errorf("Expected BaseConverterError\n")
+			}
+		} else {
+			t.Errorf("Expected BaseConverterError\n")
+		}
 	})
 }

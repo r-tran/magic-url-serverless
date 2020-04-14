@@ -5,11 +5,12 @@ import (
 	"strings"
 )
 
-type magicURLBaseConverterError struct {
+//BaseConverterError indicates unsuccessful and unsupported base conversion operations
+type BaseConverterError struct {
 	Message string
 }
 
-func (m *magicURLBaseConverterError) Error() string {
+func (m *BaseConverterError) Error() string {
 	return m.Message
 }
 
@@ -46,7 +47,7 @@ func validateNumExistsInCharacterSet(num, characterSet string) error {
 	for _, ch := range num {
 		if !strings.Contains(characterSet, string(ch)) {
 			message := fmt.Sprintf("Invalid character %c found for character set: %s", ch, characterSet)
-			return &magicURLBaseConverterError{message}
+			return &BaseConverterError{message}
 		}
 	}
 	return nil
@@ -64,7 +65,7 @@ func convert(num string, fromBase, toBase uint) (string, error) {
 		targetCharacterSet = base10Characters
 	} else {
 		message := fmt.Sprintf("Unsupported base conversion, from base: %d to base: %d", fromBase, toBase)
-		return "", &magicURLBaseConverterError{message}
+		return "", &BaseConverterError{message}
 	}
 
 	var decimalRepr uint

@@ -42,30 +42,31 @@ func main() {
 		}
 	}
 
-	//	err := deleteBase10Counter()
-	//	if err != nil {
-	//		fmt.Println("Could not delete the counter")
-	//		os.Exit(1)
-	//	}
-	//	fmt.Println("Deleted counter")
+	// err := deleteBase10Counter()
+	// if err != nil {
+	// 	fmt.Println("Could not delete the counter")
+	// 	os.Exit(1)
+	// }
+	// fmt.Println("Deleted counter")
 
-	/* 	for i := 0; i < 10; i++ {
-		count, err := magicurl.IncrementBase10Counter(svc)
-		if err != nil {
-			fmt.Println("Could not increment the counter")
-			os.Exit(1)
-		}
-		fmt.Printf("Value of base 10 counter: %v\n", count)
-	} */
+	// for i := 0; i < 10; i++ {
+	// 	count, err := magicurl.IncrementBase10Counter(svc)
+	// 	if err != nil {
+	// 		fmt.Println("Could not increment the counter")
+	// 		os.Exit(1)
+	// 	}
+	// 	fmt.Printf("Value of base 10 counter: %v\n", count)
+	// }
 
 	// Test create slug
 	slug, err := magicurl.Create("https://pythonsandpenguins.dev", svc)
 	if err != nil {
 		fmt.Println("Creating slug had an error")
+		fmt.Println(err)
 		os.Exit(1)
 	}
+	fmt.Printf("Got slug: %s\n", slug)
 
-	fmt.Printf("Result is %v\n", slug)
 }
 
 //TODO: Extract into provisioning step
@@ -150,9 +151,11 @@ func dynamoDbTableExists(tableName string) bool {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if len(res.TableNames) == 0 || *res.TableNames[0] != tableName {
+		return false
+	}
 
-	tableFound := *res.TableNames[0] == tableName
-	return tableFound
+	return true
 }
 
 func createMagicURLTable() error {
