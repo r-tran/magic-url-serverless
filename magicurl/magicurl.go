@@ -2,6 +2,7 @@ package magicurl
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -24,14 +25,14 @@ func Get(urlSlug string, client *dynamodb.DynamoDB) (*MagicURL, error) {
 	})
 	if err != nil {
 		message := fmt.Sprintf("Could not locate MagicURL for slug: %s", urlSlug)
-		return nil, &GetMagicURLSlugError{message}
+		return nil, &GetMagicURLSlugError{message, err}
 	}
 
 	magicURLItem := MagicURL{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &magicURLItem)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create MagicURL result for slug: %s", urlSlug)
-		return nil, &GetMagicURLSlugError{message}
+		return nil, &GetMagicURLSlugError{message, err}
 	}
 
 	return &magicURLItem, nil
@@ -39,24 +40,23 @@ func Get(urlSlug string, client *dynamodb.DynamoDB) (*MagicURL, error) {
 
 // Create returns a MagicURL containing the shortened URL slug for the originalURL.
 func Create(originalURL string, client *dynamodb.DynamoDB) (*MagicURL, error) {
-	//TODO: perform input validation the url
-	err := validateURL(originalURL)
+	sanitizedURL, err := validateURL(originalURL)
 	if err != nil {
 		message := fmt.Sprintf("Invalid URL format: %s", originalURL)
-		return nil, &CreateMagicURLSlugError{message}
+		return nil, &CreateMagicURLSlugError{message, err}
 	}
 
 	id, err := incrementBase10Counter(client)
 	if err != nil {
 		message := fmt.Sprintf("Could not update base counter for slug")
-		return nil, &CreateMagicURLSlugError{message}
+		return nil, &CreateMagicURLSlugError{message, err}
 	}
 
 	idString := strconv.Itoa(id)
-	magicURLSlug, err := createMagicURLItem(originalURL, idString, client)
+	magicURLSlug, err := createMagicURLItem(sanitizedURL, idString, client)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create MagicURL item for slug")
-		return nil, &CreateMagicURLSlugError{message}
+		return nil, &CreateMagicURLSlugError{message, err}
 	}
 
 	return Get(magicURLSlug, client)
@@ -78,21 +78,25 @@ func Delete(urlSlug string, client *dynamodb.DynamoDB) (*MagicURL, error) {
 	result, err := client.DeleteItem(input)
 	if err != nil {
 		message := fmt.Sprintf("Could not locate MagicURL for slug: %s", urlSlug)
-		return nil, &DeleteMagicURLSlugError{message}
+		return nil, &DeleteMagicURLSlugError{message, err}
 	}
 
 	magicURLItem := MagicURL{}
 	err = dynamodbattribute.UnmarshalMap(result.Attributes, &magicURLItem)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create MagicURL result for slug: %s", urlSlug)
-		return nil, &DeleteMagicURLSlugError{message}
+		return nil, &DeleteMagicURLSlugError{message, err}
 	}
 
 	return &magicURLItem, nil
 }
 
-func validateURL(url string) error {
-	return nil
+func validateURL(urlTarget string) (string, error) {
+	parsedURL, err := url.ParseRequestURI(urlTarget)
+	if err != nil {
+		return "", err
+	}
+	return parsedURL.String(), err
 }
 
 func createMagicURLItem(originalURL string, id string, client *dynamodb.DynamoDB) (string, error) {
