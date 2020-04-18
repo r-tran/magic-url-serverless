@@ -9,14 +9,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/personal_projects/magic-url-serverless/magicurl"
 )
 
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
+
+// var svc = dynamodb.New(sess, &aws.Config{
+// 	Endpoint: aws.String("http://localhost:8000"),
+// })
 var svc = dynamodb.New(sess, &aws.Config{
-	Endpoint: aws.String("http://localhost:8000"),
+	Region: aws.String("us-east-1"),
 })
 
 var magicURLTable = "magicUrl"
@@ -27,6 +30,7 @@ func main() {
 		err := createMagicURLTable()
 		if err != nil {
 			fmt.Println("Error while creating magicURL Table")
+			fmt.Println(err)
 			os.Exit(1)
 		}
 	} else {
@@ -38,39 +42,40 @@ func main() {
 		err := initializeBase10Counter()
 		if err != nil {
 			fmt.Println("Could not initialize the counter")
+			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
 
-	// Test create slug
-	originalURL := "https://pythonsandpenguins.dev"
-	magicURL, err := magicurl.Create(originalURL, svc)
-	if err != nil {
-		fmt.Println("Creating slug had an error")
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	fmt.Printf("Created Magic URL: %v\n", magicURL)
+	// // Test create slug
+	// originalURL := "https://pythonsandpenguins.dev"
+	// magicURL, err := magicurl.Create(originalURL, svc)
+	// if err != nil {
+	// 	fmt.Println("Creating slug had an error")
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+	// fmt.Printf("Created Magic URL: %v\n", magicURL)
 
-	// //Retrieve slug
-	fmt.Println("Retrieving the slug...")
-	magicURLItem, err := magicurl.Get(magicURL.Slug, svc)
-	if err != nil {
-		fmt.Println("GET slug had an error")
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	fmt.Printf("Result: %v\n", magicURLItem)
+	// // //Retrieve slug
+	// fmt.Println("Retrieving the slug...")
+	// magicURLItem, err := magicurl.Get(magicURL.Slug, svc)
+	// if err != nil {
+	// 	fmt.Println("GET slug had an error")
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+	// fmt.Printf("Result: %v\n", magicURLItem)
 
-	//Delete slug
-	fmt.Println("Deleting the slug...")
-	result, err := magicurl.Delete(magicURLItem.Slug, svc)
-	if err != nil {
-		fmt.Println("Delete slug had an error")
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	fmt.Printf("Result: %v\n", result)
+	// //Delete slug
+	// fmt.Println("Deleting the slug...")
+	// result, err := magicurl.Delete(magicURLItem.Slug, svc)
+	// if err != nil {
+	// 	fmt.Println("Delete slug had an error")
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+	// fmt.Printf("Result: %v\n", result)
 }
 
 //TODO: Extract into provisioning step

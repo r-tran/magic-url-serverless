@@ -45,7 +45,7 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Respon
 
 	var buf bytes.Buffer
 	body, err := json.Marshal(map[string]interface{}{
-		"slug": slug,
+		"slug": slug.Slug,
 	})
 	if err != nil {
 		return Response{StatusCode: 404}, err

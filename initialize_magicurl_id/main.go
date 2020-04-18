@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -10,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
+var magicURLTable = "magicUrl"
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
@@ -17,32 +17,30 @@ var svc = dynamodb.New(sess)
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
 func Handler(ctx context.Context) error {
-	return dynamoDbInitializeSlug()
+	return initializeBase10Counter()
 }
 
-func main() {
-	lambda.Start(Handler)
-}
-
-func dynamoDbInitializeSlug() error {
+func initializeBase10Counter() error {
 	input := &dynamodb.PutItemInput{
 		Item: map[string]*dynamodb.AttributeValue{
 			"Slug": {
-				S: aws.String("0"),
+				S: aws.String("A"),
 			},
-			"IdBase10": {
+			"Base10Counter": {
 				N: aws.String("0"),
 			},
 		},
-		TableName: aws.String("magicUrl"),
+		TableName: aws.String(magicURLTable),
 	}
 
 	_, err := svc.PutItem(input)
 	if err != nil {
-		fmt.Println("Got error calling PutItem:")
-		fmt.Println(err.Error())
 		return err
 	}
 
 	return nil
+}
+
+func main() {
+	lambda.Start(Handler)
 }

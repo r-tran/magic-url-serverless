@@ -12,6 +12,11 @@ import (
 
 var magicURLTable = "magicUrl"
 
+//MagicURL represents the database model
+type MagicURL struct {
+	Slug, OriginalURL string
+}
+
 //Get returns the Magic URL given the shortened URL slug.
 //If the Magic URL is not found, throws GetMagicURLSlugError
 func Get(urlSlug string, client *dynamodb.DynamoDB) (*MagicURL, error) {

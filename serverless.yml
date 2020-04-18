@@ -34,6 +34,7 @@ provider:
       - dynamodb:PutItem
       - dynamodb:UpdateItem
       - dynamodb:DeleteItem
+    Resource: 'arn:aws:dynamodb:us-east-1:*:*'
 
 # you can overwrite defaults here
 #  stage: dev
@@ -78,14 +79,18 @@ functions:
     handler: bin/get_magicurl
     events:
       - http:
-          path: world
+          path: /{slug}
           method: get
+          request: 
+            parameters: 
+               paths: 
+                 slug: true
   deleteMagicUrl:
     handler: bin/delete_magicurl
     events:
       - http:
-          path: yay
-          method: get
+          path: magicurl
+          method: delete
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details

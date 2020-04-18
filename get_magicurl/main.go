@@ -7,7 +7,15 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/personal_projects/magic-url-serverless/magicurl"
 )
+
+var sess = session.Must(session.NewSessionWithOptions(session.Options{
+	SharedConfigState: session.SharedConfigEnable,
+}))
+var svc = dynamodb.New(sess)
 
 // Response is of type APIGatewayProxyResponse since we're leveraging the
 // AWS Lambda Proxy Request functionality (default behavior)
@@ -15,25 +23,34 @@ import (
 // https://serverless.com/framework/docs/providers/aws/events/apigateway/#lambda-proxy-integration
 type Response events.APIGatewayProxyResponse
 
-// Handler is our lambda handler invoked by the `lambda.Start` function call
-func Handler(ctx context.Context) (Response, error) {
-	var buf bytes.Buffer
+// MagicURLRequest contains the original URL
+type MagicURLRequest struct {
+	Slug string `json:"slug,omitempty"`
+}
 
-	body, err := json.Marshal(map[string]interface{}{
-		"message": "Implementing redirect to original URL here",
-	})
+// Handler is our lambda handler invoked by the `lambda.Start` function call
+func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
+
+	slugTarget := request.PathParameters["slug"]
+	result, err := magicurl.Get(slugTarget, svc)
+	if err != nil {
+		return Response{Body: "Error", StatusCode: 400}, err
+	}
+
+	var buf bytes.Buffer
+	body, err := json.Marshal(result)
 	if err != nil {
 		return Response{StatusCode: 404}, err
 	}
 	json.HTMLEscape(&buf, body)
 
 	resp := Response{
-		StatusCode:      200,
+		StatusCode:      302,
 		IsBase64Encoded: false,
-		Body:            buf.String(),
 		Headers: map[string]string{
 			"Content-Type":           "application/json",
-			"X-MyCompany-Func-Reply": "get-magicurl-handler",
+			"X-MyCompany-Func-Reply": "create-magicurl-handler",
+			"Location":               result.OriginalURL,
 		},
 	}
 
