@@ -67,8 +67,6 @@ package:
     - ./bin/**
 
 functions:
-#  initializeMagicUrl:
-#    handler: bin/initialize_magicurl_id
   createMagicUrl:
     handler: bin/create_magicurl
     events:
