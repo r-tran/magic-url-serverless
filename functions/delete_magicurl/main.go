@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-
 	"github.com/personal_projects/magic-url-serverless/magicurl"
 )
 
@@ -26,7 +26,7 @@ type Response events.APIGatewayProxyResponse
 
 // MagicURLRequest contains the original URL
 type MagicURLRequest struct {
-	OriginalURL string `json:"url,omitempty"`
+	Slug string `json:"slug,omitempty"`
 }
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
@@ -34,24 +34,31 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Respon
 	var magicURLRequest MagicURLRequest
 	err := json.Unmarshal([]byte(request.Body), &magicURLRequest)
 	if err != nil {
-		return Response{Body: "Error", StatusCode: 400}, err
+		return Response{
+			Body:       err.Error(),
+			StatusCode: http.StatusBadRequest,
+		}, nil
 	}
 
-	originalURL := magicURLRequest.OriginalURL
-	slug, err := magicurl.Create(originalURL, svc)
+	slugTarget := magicURLRequest.Slug
+	res, err := magicurl.Delete(slugTarget, svc)
 	if err != nil {
-		return Response{Body: "Error", StatusCode: 400}, err
+		return Response{
+			Body:       err.Error(),
+			StatusCode: http.StatusBadRequest,
+		}, nil
 	}
 
 	var buf bytes.Buffer
-	body, err := json.Marshal(map[string]interface{}{
-		"slug": slug.Slug,
-	})
+	body, err := json.Marshal(res)
 	if err != nil {
-		return Response{StatusCode: 404}, err
+		return Response{
+			Body:       err.Error(),
+			StatusCode: http.StatusBadRequest,
+		}, nil
 	}
-	json.HTMLEscape(&buf, body)
 
+	json.HTMLEscape(&buf, body)
 	resp := Response{
 		StatusCode:      200,
 		IsBase64Encoded: false,

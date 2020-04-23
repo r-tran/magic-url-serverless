@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -25,32 +26,48 @@ type Response events.APIGatewayProxyResponse
 
 // MagicURLRequest contains the original URL
 type MagicURLRequest struct {
-	Slug string `json:"slug,omitempty"`
+	OriginalURL string `json:"url,omitempty"`
 }
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
-
-	slugTarget := request.PathParameters["slug"]
-	result, err := magicurl.Get(slugTarget, svc)
+	var magicURLRequest MagicURLRequest
+	err := json.Unmarshal([]byte(request.Body), &magicURLRequest)
 	if err != nil {
-		return Response{Body: "Error", StatusCode: 400}, err
+		return Response{
+			Body:       err.Error(),
+			StatusCode: http.StatusBadRequest,
+		}, nil
+	}
+
+	originalURL := magicURLRequest.OriginalURL
+	slug, err := magicurl.Create(originalURL, svc)
+	if err != nil {
+		return Response{
+			Body:       err.Error(),
+			StatusCode: http.StatusBadRequest,
+		}, nil
 	}
 
 	var buf bytes.Buffer
-	body, err := json.Marshal(result)
+	body, err := json.Marshal(map[string]interface{}{
+		"slug": slug.Slug,
+	})
 	if err != nil {
-		return Response{StatusCode: 404}, err
+		return Response{
+			Body:       err.Error(),
+			StatusCode: http.StatusBadRequest,
+		}, nil
 	}
-	json.HTMLEscape(&buf, body)
 
+	json.HTMLEscape(&buf, body)
 	resp := Response{
-		StatusCode:      302,
+		StatusCode:      200,
 		IsBase64Encoded: false,
+		Body:            buf.String(),
 		Headers: map[string]string{
 			"Content-Type":           "application/json",
 			"X-MyCompany-Func-Reply": "create-magicurl-handler",
-			"Location":               result.OriginalURL,
 		},
 	}
 
