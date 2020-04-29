@@ -16,7 +16,7 @@ import (
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
-var svc = dynamodb.New(sess)
+var svc = magicurl.NewDynamoDbService(dynamodb.New(sess))
 
 // Response is of type APIGatewayProxyResponse since we're leveraging the
 // AWS Lambda Proxy Request functionality (default behavior)

@@ -13,11 +13,9 @@ import (
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
-
 var svc = dynamodb.New(sess, &aws.Config{
 	Region: aws.String("us-east-1"),
 })
-
 var magicURLTable = "magicUrl"
 
 func main() {
@@ -36,6 +34,38 @@ func main() {
 		}
 		fmt.Println("done.")
 	}
+}
+
+func dynamoDbTableExists(tableName string) bool {
+	input := &dynamodb.ListTablesInput{
+		Limit: aws.Int64(1),
+	}
+
+	res, err := svc.ListTables(input)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(res.TableNames) == 0 || *res.TableNames[0] != tableName {
+		return false
+	}
+
+	return true
+}
+
+func base10CounterInitialized() bool {
+	result, err := svc.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(magicURLTable),
+		Key: map[string]*dynamodb.AttributeValue{
+			"Slug": {
+				S: aws.String("A"),
+			},
+		},
+	})
+	if err != nil {
+		return false
+	}
+
+	return len(result.Item) > 0
 }
 
 func initializeBase10Counter() error {
@@ -57,36 +87,4 @@ func initializeBase10Counter() error {
 	}
 
 	return nil
-}
-
-func base10CounterInitialized() bool {
-	result, err := svc.GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String(magicURLTable),
-		Key: map[string]*dynamodb.AttributeValue{
-			"Slug": {
-				S: aws.String("A"),
-			},
-		},
-	})
-	if err != nil {
-		return false
-	}
-
-	return len(result.Item) > 0
-}
-
-func dynamoDbTableExists(tableName string) bool {
-	input := &dynamodb.ListTablesInput{
-		Limit: aws.Int64(1),
-	}
-
-	res, err := svc.ListTables(input)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(res.TableNames) == 0 || *res.TableNames[0] != tableName {
-		return false
-	}
-
-	return true
 }
